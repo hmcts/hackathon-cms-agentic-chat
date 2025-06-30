@@ -1,0 +1,290 @@
+{% extends "layout.njk" %}
+{% block title %}Simple CMS - Chat Assistant{% endblock %}
+{% block content %}
+  <div class="chat-container">
+    <h2 class="govuk-heading-m">Chat Assistant</h2>
+    <button class="govuk-button govuk-button--secondary" type="button" id="new-chat-btn" style="margin-bottom:1em;">New Chat</button>
+    <div class="chat-messages" id="chat-messages"></div>
+    <form id="chat-form">
+      <div class="govuk-form-group" style="position:relative;display:flex;align-items:center;gap:0;">
+        <label class="govuk-label" for="chat-input" style="margin-bottom:0;margin-right:8px;">Your message</label>
+        <div style="position:relative;flex:1;display:flex;align-items:center;">
+          <input class="govuk-input" id="chat-input" name="chat-input" type="text" autocomplete="off" required style="width:100%;height:40px;padding-right:2.5em;box-sizing:border-box;">
+          <button type="button" id="mic-btn" aria-label="Speak" title="Speak your message" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;padding:0;margin:0;cursor:pointer;outline:none;display:flex;align-items:center;justify-content:center;height:32px;width:32px;min-width:32px;min-height:32px;">
+            <span id="mic-icon" style="display:inline-block;width:24px;height:24px;vertical-align:middle;"></span>
+          </button>
+        </div>
+        <button class="govuk-button" type="submit" style="margin-left:8px;height:40px;line-height:1.2;padding:0 18px;margin-top:28px; min-width:70px;display:flex;align-items:center;">Send</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+{% block head %}
+  <style>
+    .chat-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #fff;
+      border: 1px solid #b1b4b6;
+      border-radius: 8px;
+      padding: 24px;
+    }
+    .chat-messages {
+      min-height: 200px;
+      margin-bottom: 16px;
+      padding: 8px;
+      background: #f3f2f1;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .chat-message {
+      display: flex;
+      margin-bottom: 12px;
+    }
+    .chat-bubble {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 18px;
+      max-width: 75%;
+      word-break: break-word;
+      font-size: 1rem;
+    }
+    .chat-message.user {
+      justify-content: flex-end;
+    }
+    .chat-message.user .chat-bubble {
+      background: #1d70b8;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-message.bot {
+      justify-content: flex-start;
+    }
+    .chat-message.bot .chat-bubble {
+      background: #e1e1e1;
+      color: #222;
+      border-bottom-left-radius: 4px;
+    }
+    #chat-form .govuk-form-group {
+      margin-bottom: 0;
+    }
+    #chat-input {
+      font-size: 1rem;
+      height: 40px;
+      box-sizing: border-box;
+    }
+    #mic-btn {
+      height: 32px;
+      width: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin: 0;
+      background: none;
+      border: none;
+      outline: none;
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    #mic-icon {
+      width: 24px;
+      height: 24px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    #chat-form .govuk-button[type="submit"] {
+      height: 40px;
+      min-width: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      margin-left: 8px;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+  </style>
+{% endblock %}
+{% block scripts %}
+<script>
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatMessages = document.getElementById('chat-messages');
+
+chatForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const userMsg = chatInput.value.trim();
+  if (!userMsg) return;
+  addMessage('user', userMsg);
+  chatInput.value = '';
+  // Add animated bot message immediately
+  const botMsgDiv = document.createElement('div');
+  botMsgDiv.className = 'chat-message bot';
+  const botBubble = document.createElement('div');
+  botBubble.className = 'chat-bubble';
+  botBubble.textContent = '.';
+  botMsgDiv.appendChild(botBubble);
+  chatMessages.appendChild(botMsgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  // Animate the dots
+  let dotCount = 1;
+  const maxDots = 3;
+  const animInterval = setInterval(() => {
+    dotCount = (dotCount % maxDots) + 1;
+    botBubble.textContent = '.'.repeat(dotCount);
+  }, 400);
+  try {
+    const res = await fetch('/api/chat/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMsg })
+    });
+    const data = await res.json();
+    clearInterval(animInterval);
+    botMsgDiv.remove(); // Remove the animated bot message
+    addMessage('bot', data.response || data.error || 'No response.');
+  } catch (err) {
+    clearInterval(animInterval);
+    botMsgDiv.remove();
+    addMessage('bot', 'Error contacting assistant.');
+  }
+});
+
+function forceCodeblock(text) {
+  // Replace triple backtick code blocks with <pre> blocks
+  let html = text.replace(/```([\s\S]*?)```/g, function(match, code) {
+    return '<pre class="govuk-!-margin-bottom-2" style="background:#f3f2f1;border-radius:4px;padding:1em;font-family:monospace;white-space:pre-line;">' +
+      code.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+  });
+  // Replace [Approve](#approve-delete-123) and [Cancel](#cancel-delete-123) with buttons
+  html = html.replace(/\[Approve\]\(#approve-delete-(\d+)\)/gi, function(_, id) {
+    return `<button class="govuk-button govuk-button--warning" style="margin-right:8px;" onclick="window.confirmDeleteCase('${id}', this)">Approve</button>`;
+  });
+  html = html.replace(/\[Cancel\]\(#cancel-delete-(\d+)\)/gi, function(_, id) {
+    return `<button class="govuk-button govuk-button--secondary" onclick="window.cancelDeleteCase('${id}', this)">Cancel</button>`;
+  });
+  return html;
+}
+
+function addMessage(sender, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message ' + sender;
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+
+  if (sender === 'bot') {
+    bubble.innerHTML = forceCodeblock(text);
+  } else {
+    bubble.textContent = text;
+  }
+  msgDiv.appendChild(bubble);
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+window.addMessage = addMessage;
+
+window.confirmDeleteCase = async function(id, btn) {
+  btn.disabled = true;
+  addMessage('user', `confirm delete case ${id}`);
+  const res = await fetch('/api/chat/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `confirm delete case ${id}` })
+  });
+  const data = await res.json();
+  addMessage('bot', data.response || data.error || 'No response.');
+};
+window.cancelDeleteCase = function(id, btn) {
+  btn.disabled = true;
+  addMessage('user', `cancel delete case ${id}`);
+  addMessage('bot', 'Case deletion cancelled.');
+};
+
+// On page load, fetch chat history from the server
+async function loadChatHistory() {
+  chatMessages.innerHTML = '';
+  const res = await fetch('/api/chat/history');
+  if (res.ok) {
+    const data = await res.json();
+    (data.history || []).forEach(m => addMessage(m.role === 'assistant' ? 'bot' : 'user', m.content));
+  }
+}
+
+document.getElementById('new-chat-btn').addEventListener('click', async function() {
+  chatMessages.innerHTML = '';
+  await fetch('/api/chat/clear', { method: 'POST' });
+  await loadChatHistory();
+});
+
+// On page load, load chat history from server
+loadChatHistory();
+
+// Speech Recognition (Web Speech API)
+const micBtn = document.getElementById('mic-btn');
+const micIcon = document.getElementById('mic-icon');
+const micSvg = document.getElementById('mic-svg');
+let recognition, recognizing = false;
+
+const micIdleSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;color:#505a5f;"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`;
+const micActiveSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;color:#1d70b8;"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><circle cx="12" cy="17" r="2.5" fill="#1d70b8" stroke="none"/></svg>`;
+
+function setMicIcon(active) {
+  micIcon.innerHTML = active ? micActiveSVG : micIdleSVG;
+}
+
+function setupSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.disabled = true;
+    micBtn.title = 'Speech recognition not supported in this browser.';
+    setMicIcon(false);
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = function() {
+    recognizing = true;
+    setMicIcon(true);
+    micBtn.title = 'Listening... click to stop.';
+  };
+  recognition.onend = function() {
+    recognizing = false;
+    setMicIcon(false);
+    micBtn.title = 'Speak your message';
+  };
+  recognition.onerror = function(event) {
+    recognizing = false;
+    setMicIcon(false);
+    micBtn.title = 'Speak your message';
+    if (event.error !== 'no-speech') {
+      alert('Speech recognition error: ' + event.error);
+    }
+  };
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    chatInput.value = transcript;
+    chatInput.focus();
+  };
+
+  micBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (recognizing) {
+      recognition.stop();
+      return;
+    }
+    recognition.start();
+  });
+}
+setMicIcon(false);
+setupSpeechRecognition();
+</script>
+{% endblock %}

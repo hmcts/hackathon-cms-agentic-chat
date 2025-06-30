@@ -1,0 +1,22 @@
+{% extends "layout.njk" %}
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <h1 class="govuk-heading-l">Enter Pass Key</h1>
+      {% if error %}
+        <div class="govuk-error-summary" role="alert">
+          <h2 class="govuk-error-summary__title">There is a problem</h2>
+          <div class="govuk-error-summary__body">
+            <p class="govuk-error-message">{{ error }}</p>
+          </div>
+        </div>
+      {% endif %}
+      <form method="post" action="/passkey" class="govuk-form-group">
+        <label class="govuk-label govuk-label--m" for="passkey">Pass Key</label>
+        <input class="govuk-input" id="passkey" name="passkey" type="password" required autocomplete="off" />
+        <div style="margin-bottom: 20px;"></div>
+        <button class="govuk-button" data-module="govuk-button" type="submit">Continue</button>
+      </form>
+    </main>
+  </div>
+{% endblock %}
