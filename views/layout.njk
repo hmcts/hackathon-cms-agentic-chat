@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+  <head>
+    <meta charset="utf-8">
+    <title>{% block title %}Simple CMS - GOV.UK UI{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/govuk-frontend.min.css?v=2">
+    <style>
+      body { margin: 0; }
+      .govuk-main-wrapper { min-height: 80vh; }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body class="govuk-template__body">
+    <header class="govuk-header" role="banner" data-module="govuk-header">
+      <div class="govuk-header__container govuk-width-container">
+        <div class="govuk-header__logo">
+          <a href="/" class="govuk-header__link govuk-header__link--homepage">
+            Simple CMS
+          </a>
+        </div>
+        <div class="govuk-header__content">
+          <nav class="govuk-header__navigation" aria-label="Top Level Navigation">
+            <ul class="govuk-header__navigation-list">
+              <li class="govuk-header__navigation-item{% if request.url == '/' %} govuk-header__navigation-item--active{% endif %}">
+                <a class="govuk-header__link" href="/">Home</a>
+              </li>
+              <li class="govuk-header__navigation-item{% if request.url == '/chat' %} govuk-header__navigation-item--active{% endif %}">
+                <a class="govuk-header__link" href="/chat">Chat</a>
+              </li>
+              <li class="govuk-header__navigation-item{% if request.url == '/cases' %} govuk-header__navigation-item--active{% endif %}">
+                <a class="govuk-header__link" href="/cases">Cases</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </header>
+    <main class="govuk-main-wrapper govuk-width-container" id="main-content" role="main">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="govuk-footer" role="contentinfo">
+      <div class="govuk-width-container">
+        <div class="govuk-footer__meta">
+          <div class="govuk-footer__meta-item govuk-footer__meta-item--grow">
+            &copy; 2025 Simple CMS<br>
+            <span style="color:#b10e1e;font-size:0.95em;">Internal demo – for experimental use only.</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

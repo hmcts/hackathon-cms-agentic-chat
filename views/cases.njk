@@ -1,0 +1,109 @@
+{% extends "layout.njk" %}
+{% block title %}Cases - Simple CMS{% endblock %}
+{% block head %}
+  <style>
+    .hidden { display: none; }
+  </style>
+{% endblock %}
+{% block content %}
+  <h1>Cases</h1>
+  <button class="govuk-button" onclick="showCreateForm()">Create New Case</button>
+  <table class="govuk-table">
+    <caption class="govuk-table__caption govuk-table__caption--m">Case List</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header">ID</th>
+        <th scope="col" class="govuk-table__header">Name</th>
+        <th scope="col" class="govuk-table__header">Description</th>
+        <th scope="col" class="govuk-table__header">Actions</th>
+        <th scope="col" class="govuk-table__header">Case Notes</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for case in cases %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">{{ case.id }}</td>
+        <td class="govuk-table__cell">{{ case.name }}</td>
+        <td class="govuk-table__cell">{{ case.description }}</td>
+        <td class="govuk-table__cell">
+          <button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" onclick="editCase({{ case.id }})">Edit</button>
+          <button class="govuk-button govuk-button--warning govuk-!-margin-bottom-0" onclick="deleteCase({{ case.id }})">Delete</button>
+        </td>
+        <td class="govuk-table__cell">
+          <a href="/cases/{{ case.id }}/notes" class="govuk-link" title="View or edit case notes for {{ case.name|default('this case') }}">View notes</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form id="caseForm" class="govuk-form-group hidden">
+    <div id="caseFormMode" class="govuk-!-margin-bottom-2 govuk-!-font-weight-bold"></div>
+    <div class="govuk-form-group">
+      <label class="govuk-label">ID: <span id="caseIdDisplayLabel">TBA</span></label>
+    </div>
+    <input type="hidden" id="caseId">
+    <label class="govuk-label">Name: <input class="govuk-input" type="text" id="caseName" required></label><br>
+    <label class="govuk-label">Description: <input class="govuk-input" type="text" id="caseDescription"></label><br>
+    <button id="caseFormSubmit" class="govuk-button" type="submit">Create</button>
+    <button class="govuk-button govuk-button--secondary" type="button" onclick="hideForm()">Cancel</button>
+  </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('caseForm').addEventListener('submit', submitCaseForm);
+
+  function editCase(id) {
+    fetch(`/api/cases/${id}`)
+      .then(res => res.json())
+      .then(c => {
+        document.getElementById('caseId').value = c.id;
+        document.getElementById('caseIdDisplayLabel').textContent = c.id;
+        document.getElementById('caseName').value = c.name || '';
+        document.getElementById('caseDescription').value = c.description || '';
+        document.getElementById('caseForm').classList.remove('hidden');
+        document.getElementById('caseFormMode').textContent = `Editing case (ID: ${c.id})`;
+        document.getElementById('caseFormSubmit').textContent = 'Save';
+      });
+  }
+  function deleteCase(id) {
+    if (confirm('Are you sure you want to delete this case?')) {
+      fetch(`/api/cases/${id}`, { method: 'DELETE' })
+        .then(() => window.location.reload());
+    }
+  }
+  function showCreateForm() {
+    document.getElementById('caseId').value = '';
+    document.getElementById('caseIdDisplayLabel').textContent = 'TBA';
+    document.getElementById('caseName').value = '';
+    document.getElementById('caseDescription').value = '';
+    document.getElementById('caseForm').classList.remove('hidden');
+    document.getElementById('caseFormMode').textContent = 'Creating new case';
+    document.getElementById('caseFormSubmit').textContent = 'Create';
+  }
+  function hideForm() {
+    document.getElementById('caseForm').classList.add('hidden');
+    document.getElementById('caseFormMode').textContent = '';
+    document.getElementById('caseFormSubmit').textContent = 'Create';
+    document.getElementById('caseIdDisplayLabel').textContent = 'TBA';
+  }
+  async function submitCaseForm(event) {
+    event.preventDefault();
+    const id = document.getElementById('caseId').value;
+    const name = document.getElementById('caseName').value;
+    const description = document.getElementById('caseDescription').value;
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/cases/${id}` : '/api/cases';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description })
+    });
+    if (res.ok) {
+      // Only reload if the request succeeded
+      window.location.reload();
+    } else {
+      alert('Failed to save case.');
+    }
+  }
+</script>
+{% endblock %}
