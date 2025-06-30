@@ -1,0 +1,21 @@
+{% extends "layout.njk" %}
+{% block content %}
+  <h1 class="govuk-heading-xl">Welcome</h1>
+  <p class="govuk-body">
+    This is an internal demo to explore the feasibility of a case management system with a chat interface. The agentic AI can create, read, update, and delete entities, and orchestrate these tools according to business logic.
+  </p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>
+      <a class="govuk-link" href="/cases">Create a case manually on the Cases page</a> and append notes to it.
+    </li>
+    <li>
+      <a class="govuk-link" href="/chat">Move to the Chat window</a> and ask the agent to create, update, or delete cases and notes for you.
+    </li>
+    <li>
+      You can always return to the <a class="govuk-link" href="/cases">Cases page</a> to see the current list of cases and their notes.
+    </li>
+  </ul>
+  <p class="govuk-body">
+    This demo is for exploration purposes only. Do not include PII. Do not include live data.
+  </p>
+{% endblock %}
