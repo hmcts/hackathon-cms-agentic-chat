@@ -112,3 +112,6 @@ logs/
 public/assets/fonts/
 public/assets/images/
 public/rebrand/images/
+
+# azure
+.azure/
