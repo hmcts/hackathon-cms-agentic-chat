@@ -1,6 +1,10 @@
 {% extends "layout.njk" %}
 {% block title %}Simple CMS - Chat Assistant{% endblock %}
 {% block content %}
+  <div class="govuk-inset-text govuk-!-margin-bottom-4" style="background:#fef7f7;border-left:8px solid #b10e1e;">
+    <strong>Disclaimer:</strong> Messages are logged for audit and debugging purposes. <br>
+    <span>Do not use sensitive information. Do not use this service for any purpose other than the demo.</span>
+  </div>
   <div class="chat-container">
     <h2 class="govuk-heading-m">Chat Assistant</h2>
     <button class="govuk-button govuk-button--secondary" type="button" id="new-chat-btn" style="margin-bottom:1em;">New Chat</button>
