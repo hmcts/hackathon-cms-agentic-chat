@@ -143,7 +143,8 @@ chatForm.addEventListener('submit', async function(e) {
     const res = await fetch('/api/chat/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMsg })
+      body: JSON.stringify({ message: userMsg }),
+      credentials: 'same-origin'
     });
     const data = await res.json();
     clearInterval(animInterval);
@@ -195,7 +196,8 @@ window.confirmDeleteCase = async function(id, btn) {
   const res = await fetch('/api/chat/message', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: `confirm delete case ${id}` })
+    body: JSON.stringify({ message: `confirm delete case ${id}` }),
+    credentials: 'same-origin'
   });
   const data = await res.json();
   addMessage('bot', data.response || data.error || 'No response.');
@@ -209,7 +211,7 @@ window.cancelDeleteCase = function(id, btn) {
 // On page load, fetch chat history from the server
 async function loadChatHistory() {
   chatMessages.innerHTML = '';
-  const res = await fetch('/api/chat/history');
+  const res = await fetch('/api/chat/history', { credentials: 'same-origin' });
   if (res.ok) {
     const data = await res.json();
     (data.history || []).forEach(m => addMessage(m.role === 'assistant' ? 'bot' : 'user', m.content));
@@ -218,7 +220,7 @@ async function loadChatHistory() {
 
 document.getElementById('new-chat-btn').addEventListener('click', async function() {
   chatMessages.innerHTML = '';
-  await fetch('/api/chat/clear', { method: 'POST' });
+  await fetch('/api/chat/clear', { method: 'POST', credentials: 'same-origin' });
   await loadChatHistory();
 });
 

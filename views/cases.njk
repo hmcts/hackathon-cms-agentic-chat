@@ -96,7 +96,8 @@
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description })
+      body: JSON.stringify({ name, description }),
+      credentials: 'same-origin'
     });
     if (res.ok) {
       // Only reload if the request succeeded

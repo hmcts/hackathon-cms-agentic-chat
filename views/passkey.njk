@@ -20,3 +20,20 @@
     </main>
   </div>
 {% endblock %}
+{% block cookie_banner %}
+<div id="cookie-banner" class="govuk-cookie-banner" role="region" aria-label="Cookies on this website" style="display:block;">
+  <div class="govuk-cookie-banner__message govuk-width-container">
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-two-thirds">
+        <p class="govuk-body">This website is using cookies and JavaScript. If you want to use voice recognition, you will be prompted for permission separately.</p>
+        <button id="cookie-accept-btn" class="govuk-button" type="button">I understand</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById('cookie-accept-btn').addEventListener('click', function() {
+    document.getElementById('cookie-banner').style.display = 'none';
+  });
+</script>
+{% endblock %}

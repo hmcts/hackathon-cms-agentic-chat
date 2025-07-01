@@ -1,23 +1,25 @@
 import { Note } from '../models/Note.model';
 
-let notes: Note[] = [];
-let nextNoteId = 1;
-
 export const NoteService = {
-  addNote(case_id: number, content: string): Note {
+  addNote(session: any, case_id: number, content: string): Note {
+    if (!session.notes) session.notes = {};
+    if (!session.nextNoteId) session.nextNoteId = 1;
+    if (!session.notes[case_id]) session.notes[case_id] = [];
     const note: Note = {
-      id: nextNoteId++,
+      id: session.nextNoteId++,
       case_id,
       content,
       created_at: new Date().toISOString(),
     };
-    notes.push(note);
+    session.notes[case_id].push(note);
     return note;
   },
-  getNotesByCase(case_id: number): Note[] {
-    return notes.filter(n => n.case_id === case_id);
+  getNotesByCase(session: any, case_id: number): Note[] {
+    return (session.notes && session.notes[case_id]) ? session.notes[case_id] : [];
   },
-  deleteNotesByCase(case_id: number): void {
-    notes = notes.filter(n => n.case_id !== case_id);
+  deleteNotesByCase(session: any, case_id: number): void {
+    if (session.notes && session.notes[case_id]) {
+      delete session.notes[case_id];
+    }
   },
 };

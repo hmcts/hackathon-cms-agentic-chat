@@ -8,27 +8,26 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-let chatMessages: ChatMessage[] = [];
-let nextChatId = 1;
-
 export const ChatService = {
-  addMessage(user_id: string, role: string, content: string): ChatMessage {
+  addMessage(session: any, role: string, content: string): ChatMessage {
+    if (!session.chats) session.chats = [];
+    if (!session.nextChatId) session.nextChatId = 1;
     const message: ChatMessage = {
-      id: nextChatId++,
-      user_id,
+      id: session.nextChatId++,
+      user_id: session.sessionId || 'unknown',
       role,
       content,
       timestamp: Date.now(),
     };
-    chatMessages.push(message);
+    session.chats.push(message);
     return message;
   },
 
-  getMessagesByUser(user_id: string): ChatMessage[] {
-    return chatMessages.filter(m => m.user_id === user_id);
+  getMessages(session: any): ChatMessage[] {
+    return session.chats || [];
   },
 
-  clearMessagesByUser(user_id: string): void {
-    chatMessages = chatMessages.filter(m => m.user_id !== user_id);
+  clearMessages(session: any): void {
+    session.chats = [];
   },
 };

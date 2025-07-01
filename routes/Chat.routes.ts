@@ -1,21 +1,25 @@
 import express from 'express';
 import { chatWithAgent } from '../openai/agent';
 import { ChatService } from '../services/Chat.service';
+import { Request, Response, NextFunction } from 'express';
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if ((req as any).session && (req as any).session.authenticated) {
+    return next();
+  }
+  res.status(401).json({ message: 'Authentication required' });
+}
 
 const router = express.Router();
-
-// Helper to get a user ID (for demo, use IP address)
-function getUserId(req: express.Request): string {
-  return req.ip || 'unknown';
-}
+router.use(requireAuth);
 
 router.post('/message', async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Message is required' });
-  const userId = getUserId(req);
-  let chatHistory = ChatService.getMessagesByUser(userId);
-  ChatService.addMessage(userId, 'user', message);
-  chatHistory = ChatService.getMessagesByUser(userId);
+  // Use session for chat history
+  let chatHistory = ChatService.getMessages((req as any).session);
+  ChatService.addMessage((req as any).session, 'user', message);
+  chatHistory = ChatService.getMessages((req as any).session);
   try {
     const confirmDeleteMatch = message.match(/^confirm delete case (\d+)$/i);
     const cancelDeleteMatch = message.match(/^cancel delete case (\d+)$/i);
@@ -23,36 +27,36 @@ router.post('/message', async (req, res) => {
     if (deleteIdMatch) {
       const id = Number(deleteIdMatch[1]);
       const { CaseService } = require('../services/Case.service');
-      const foundCase = CaseService.findById(id);
+      const foundCase = CaseService.findById((req as any).session, id);
       if (!foundCase) {
-        ChatService.addMessage(userId, 'assistant', `Case with ID ${id} not found.`);
+        ChatService.addMessage((req as any).session, 'assistant', `Case with ID ${id} not found.`);
         return res.json({ response: `Case with ID ${id} not found.` });
       }
       const name = foundCase.name || '';
       const desc = foundCase.description || '(No description provided)';
       const codeBlock = `Case to delete\nID: ${id}\nName: ${name}\nDescription: ${desc}`;
       const confirmMsg = `To confirm deletion, click or respond:\n\n\u0060\u0060\u0060\n${codeBlock}\n\u0060\u0060\u0060\n[Approve](#approve-delete-${id}) [Cancel](#cancel-delete-${id})`;
-      ChatService.addMessage(userId, 'assistant', confirmMsg);
+      ChatService.addMessage((req as any).session, 'assistant', confirmMsg);
       return res.json({ response: confirmMsg });
     }
     if (confirmDeleteMatch) {
       const id = Number(confirmDeleteMatch[1]);
       const { CaseService } = require('../services/Case.service');
-      const deleted = CaseService.delete(id);
+      const deleted = CaseService.delete((req as any).session, id);
       if (deleted) {
-        ChatService.addMessage(userId, 'assistant', `Case ${id} deleted successfully.`);
+        ChatService.addMessage((req as any).session, 'assistant', `Case ${id} deleted successfully.`);
         return res.json({ response: `Case ${id} deleted successfully.` });
       } else {
-        ChatService.addMessage(userId, 'assistant', `Case ${id} not found or already deleted.`);
+        ChatService.addMessage((req as any).session, 'assistant', `Case ${id} not found or already deleted.`);
         return res.json({ response: `Case ${id} not found or already deleted.` });
       }
     }
     if (cancelDeleteMatch) {
-      ChatService.addMessage(userId, 'assistant', `Case deletion cancelled.`);
+      ChatService.addMessage((req as any).session, 'assistant', `Case deletion cancelled.`);
       return res.json({ response: `Case deletion cancelled.` });
     }
     // Use only the content for chatWithAgent
-    const chatForAgent = ChatService.getMessagesByUser(userId).map(m => ({ role: m.role, content: m.content }));
+    const chatForAgent = ChatService.getMessages((req as any).session).map((m: any) => ({ role: m.role, content: m.content }));
     const response = await chatWithAgent(chatForAgent);
     const choice = response.choices?.[0];
     let botMsg = choice?.message?.content || '';
@@ -70,7 +74,7 @@ router.post('/message', async (req, res) => {
         if (name && description) {
           // Dynamically import CaseService to avoid circular deps
           const { CaseService } = require('../services/Case.service');
-          const newCase = CaseService.create({ name, description });
+          const newCase = CaseService.create((req as any).session, { name, description });
           botMsg = `Case created: ${newCase.name} (ID: ${newCase.id})`;
         } else {
           botMsg = 'Missing required fields for case creation.';
@@ -86,7 +90,7 @@ router.post('/message', async (req, res) => {
         if (id) {
           // Dynamically import CaseService to avoid circular deps
           const { CaseService } = require('../services/Case.service');
-          const foundCase = CaseService.findById(id);
+          const foundCase = CaseService.findById((req as any).session, id);
           if (!foundCase) {
             botMsg = `Case with ID ${id} not found.`;
           } else {
@@ -98,7 +102,7 @@ router.post('/message', async (req, res) => {
         }
       } else if (toolCall.function.name === 'getCases') {
         const { CaseService } = require('../services/Case.service');
-        const cases = CaseService.findAll();
+        const cases = CaseService.findAll((req as any).session);
         if (cases.length === 0) {
           botMsg = 'No cases found.';
         } else {
@@ -112,7 +116,7 @@ router.post('/message', async (req, res) => {
         const { id, name, description } = args;
         if (id) {
           const { CaseService } = require('../services/Case.service');
-          const updated = CaseService.update(id, { name, description });
+          const updated = CaseService.update((req as any).session, id, { name, description });
           if (updated) {
             botMsg = `Case updated successfully.\n\n\u0060\u0060\u0060\nCase ID: ${updated.id}\nName: ${updated.name}\nDescription: ${updated.description || ''}\n\u0060\u0060\u0060`;
           } else {
@@ -127,7 +131,7 @@ router.post('/message', async (req, res) => {
         const { case_id } = args;
         if (case_id) {
           const { NoteService } = require('../services/Note.service');
-          const notes = NoteService.getNotesByCase(case_id);
+          const notes = NoteService.getNotesByCase((req as any).session, case_id);
           if (notes.length === 0) {
             botMsg = `No notes found for case ${case_id}.`;
           } else {
@@ -146,7 +150,7 @@ router.post('/message', async (req, res) => {
         const { case_id, content } = args;
         if (case_id && content) {
           const { NoteService } = require('../services/Note.service');
-          const note = NoteService.addNote(case_id, content);
+          const note = NoteService.addNote((req as any).session, case_id, content);
           botMsg =
             `Note added to case ${case_id}:\n` +
             `\u0060\u0060\u0060\nNote ID: ${note.id}\nCreated: ${note.created_at ? new Date(note.created_at).toLocaleString('en-GB') : ''}\nContent: ${note.content}\n\u0060\u0060\u0060`;
@@ -160,7 +164,7 @@ router.post('/message', async (req, res) => {
     if (!botMsg) {
       botMsg = 'No response.';
     }
-    ChatService.addMessage(userId, 'assistant', botMsg);
+    ChatService.addMessage((req as any).session, 'assistant', botMsg);
     res.json({ response: botMsg });
   } catch (err: any) {
     console.error('[Chat Route Error]', err && (err.stack || err.message || err));
@@ -170,15 +174,13 @@ router.post('/message', async (req, res) => {
 
 // Endpoint to clear chat history
 router.post('/clear', (req, res) => {
-  const userId = getUserId(req);
-  ChatService.clearMessagesByUser(userId);
+  ChatService.clearMessages((req as any).session);
   res.json({ success: true });
 });
 
 // Endpoint to get chat history for the current user
 router.get('/history', (req, res) => {
-  const userId = getUserId(req);
-  const history = ChatService.getMessagesByUser(userId);
+  const history = ChatService.getMessages((req as any).session);
   res.json({ history });
 });
 
