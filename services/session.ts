@@ -18,11 +18,14 @@ export function sessionMiddleware(req: Request, res: Response, next: NextFunctio
   // Attach session data to request
   if (!sessionStore[sessionId]) {
     sessionStore[sessionId] = {
+      id: sessionId, // <-- Add sessionId to session object
       authenticated: false, // Passkey provided
       cases: [],            // User's cases
       notes: {},            // Notes per caseId: { [caseId]: [notes] }
       chats: []             // Recent chats
     };
+  } else if (!sessionStore[sessionId].id) {
+    sessionStore[sessionId].id = sessionId;
   }
   (req as any).session = sessionStore[sessionId];
   next();

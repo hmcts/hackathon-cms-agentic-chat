@@ -2,6 +2,7 @@ import express from 'express';
 import { chatWithAgent } from '../openai/agent';
 import { ChatService } from '../services/Chat.service';
 import { Request, Response, NextFunction } from 'express';
+import { logEvent } from '../services/Logger';
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if ((req as any).session && (req as any).session.authenticated) {
@@ -20,6 +21,18 @@ router.post('/message', async (req, res) => {
   let chatHistory = ChatService.getMessages((req as any).session);
   ChatService.addMessage((req as any).session, 'user', message);
   chatHistory = ChatService.getMessages((req as any).session);
+
+  // Log the user message
+  let ip = Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : (req.headers['x-forwarded-for'] || req.ip || '');
+  if (ip === '::1') ip = '127.0.0.1';
+  logEvent({
+    sessionId: (req as any).session.id || 'unknown',
+    ip,
+    userAgent: req.headers['user-agent'] || '',
+    event: 'user_message',
+    data: { message },
+  });
+
   try {
     const confirmDeleteMatch = message.match(/^confirm delete case (\d+)$/i);
     const cancelDeleteMatch = message.match(/^cancel delete case (\d+)$/i);
@@ -164,6 +177,19 @@ router.post('/message', async (req, res) => {
     if (!botMsg) {
       botMsg = 'No response.';
     }
+    // Log the AI response
+    let ip2 = Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : (req.headers['x-forwarded-for'] || req.ip || '');
+    if (ip2 === '::1') ip2 = '127.0.0.1';
+    logEvent({
+      sessionId: (req as any).session.id || 'unknown',
+      ip: ip2,
+      userAgent: req.headers['user-agent'] || '',
+      event: 'ai_response',
+      data: {
+        response: botMsg,
+        stop_reason: choice?.finish_reason || null,
+      },
+    });
     ChatService.addMessage((req as any).session, 'assistant', botMsg);
     res.json({ response: botMsg });
   } catch (err: any) {
